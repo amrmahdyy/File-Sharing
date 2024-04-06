@@ -29,12 +29,13 @@ namespace FileSharing.Api.Controllers
                 var userExisted = context.Users.Where(u => u.Username == user.Username).FirstOrDefault();
                 if (userExisted != null)
                 {
-                    return StatusCode(409, $"User {user.Username} already exists");
+                    return StatusCode(409, new { message = $"User {user.Username} already exists" });
                 }
                 user.Password = HashPassword(user.Password);
                 context.Users.Add(user);
                 context.SaveChanges();
-                return Created($"api/users/{user.UserId}", user);
+                var token = GenerateToken(user);
+                return Created($"api/users/{user.UserId}", new { token = token});
             };
 
             return Ok(user);
@@ -56,6 +57,10 @@ namespace FileSharing.Api.Controllers
         {
             using (var context = new FileSharingDbContext())
             {
+                var userIdFromToken = GetUserId();
+                if(Int32.Parse(userIdFromToken) != id) {
+                    return Unauthorized(new { message = "Invalid credentials"});
+                }
                 var user = context.Users.Where(u => u.UserId == id).FirstOrDefault();
 
             }
@@ -86,15 +91,8 @@ namespace FileSharing.Api.Controllers
             return HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
         }
         // Generates Token based on the userId with a 7-day expiry date
-        [HttpPost]
-        [Route("token")]
-        public ActionResult GenerateToken([FromBody] User user)
+        private string GenerateToken([FromBody] User user)
         {
-            if (!UserAuthenticated(user))
-            {
-                return Unauthorized("Ivalid username or password");
-            }
-            var expires = DateTime.UtcNow.AddDays(7);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new Claim[]
@@ -113,7 +111,8 @@ namespace FileSharing.Api.Controllers
             };
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return Ok(new { token = tokenHandler.WriteToken(token)});
+            return tokenHandler.WriteToken(token);
+            // return Ok(new { token = tokenHandler.WriteToken(token)});
         }
     }
 }
