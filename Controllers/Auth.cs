@@ -102,12 +102,12 @@ namespace FileSharing.Api.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(), ClaimValueTypes.DateTime),
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Name, user.Username) // Use standard claim types as much as possible
+                new Claim(ClaimTypes.Name, user.Username)
                        }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(
                            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"])),
-                           SecurityAlgorithms.HmacSha512Signature), // Ensure this matches the algorithm used in token validation
+                           SecurityAlgorithms.HmacSha512Signature),
                 Issuer = configuration["Jwt:Issuer"],
                 Audience = configuration["Jwt:Audience"]
             };
