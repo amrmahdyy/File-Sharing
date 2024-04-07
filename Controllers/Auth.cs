@@ -17,37 +17,38 @@ namespace FileSharing.Api.Controllers
     public class AuthController : ControllerBase
     {
         IConfiguration configuration;
-        public AuthController(IConfiguration configuration)
+        private readonly FileSharingDbContext context;
+        public AuthController(FileSharingDbContext context, IConfiguration configuration)
         {
+            this.context = context;
             this.configuration = configuration;
         }
         [HttpPost]
         public IActionResult CreateUser([FromBody] User user)
         {
-            using (var context = new FileSharingDbContext())
-            {
-                var userExisted = context.Users.Where(u => u.Username == user.Username).FirstOrDefault();
-                if (userExisted != null)
-                {
-                    return StatusCode(409, new { message = $"User {user.Username} already exists" });
-                }
-                user.Password = HashPassword(user.Password);
-                context.Users.Add(user);
-                context.SaveChanges();
-                var token = GenerateToken(user);
-                return Created($"api/users/{user.UserId}", new { token = token});
-            };
 
+            var userExisted = context.Users.Where(u => u.Username == user.Username).FirstOrDefault();
+            if (userExisted != null)
+            {
+                return StatusCode(409, new { message = $"User {user.Username} already exists" });
+            }
+            user.Password = HashPassword(user.Password);
+            context.Users.Add(user);
+            context.SaveChanges();
+            var token = GenerateToken(user);
+            return Created($"api/users/{user.UserId}", new { token = token });
             return Ok(user);
         }
         [HttpPost]
         [Route("login")]
-        public IActionResult LoginUser([FromBody] User user) {
-            if (UserAuthenticated(user)) {
+        public IActionResult LoginUser([FromBody] User user)
+        {
+            if (UserAuthenticated(user))
+            {
                 var token = GenerateToken(user);
-                return Ok(new {token = token});
+                return Ok(new { token = token });
             }
-            return Unauthorized(new { message = "Invalid username or password"});
+            return Unauthorized(new { message = "Invalid username or password" });
         }
 
         [HttpGet]
@@ -55,33 +56,29 @@ namespace FileSharing.Api.Controllers
         [Authorize]
         public ActionResult GetUser(int id)
         {
-            using (var context = new FileSharingDbContext())
-            {
-                var userIdFromToken = GetUserId();
-                if(Int32.Parse(userIdFromToken) != id) {
-                    return Unauthorized(new { message = "Invalid credentials"});
-                }
-                var user = context.Users.Where(u => u.UserId == id).FirstOrDefault();
 
+            var userIdFromToken = GetUserId();
+            if (Int32.Parse(userIdFromToken) != id)
+            {
+                return Unauthorized(new { message = "Invalid credentials" });
             }
+            var user = context.Users.Where(u => u.UserId == id).FirstOrDefault();
             return Ok();
         }
 
         // Check if the username exists in the database or not
         private bool UserAuthenticated(User user)
         {
-            using (var context = new FileSharingDbContext())
-            {
-                var userExisted = context.Users.Where(u => u.Username == user.Username && Verifypassword(u.Password, user.Password)).FirstOrDefault();
-                return userExisted != null;
-            }
-
+            var userExisted = context.Users.Where(u => u.Username == user.Username && Verifypassword(u.Password, user.Password)).FirstOrDefault();
+            return userExisted != null;
         }
 
-        private string HashPassword(string password) {
+        private string HashPassword(string password)
+        {
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
-        private bool Verifypassword(string password, string hashedPassword) {
+        private bool Verifypassword(string password, string hashedPassword)
+        {
             return BCrypt.Net.BCrypt.Verify(password, hashedPassword);
         }
 

@@ -1,4 +1,6 @@
+using FileSharing.Api;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -12,6 +14,8 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 //builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddControllers();
+builder.Services.AddDbContext<FileSharingDbContext>(option =>
+    option.UseSqlServer(builder.Configuration.GetConnectionString("DB_Context")));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
